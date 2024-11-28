@@ -165,7 +165,7 @@ def TakeImages():
     Id = txt.get()
     name = txt2.get()
     if is_number(Id) and name != "":
-        cam = cv2.VideoCapture(0)
+        cam = cv2.VideoCapture(2)
         harcascadePath = "haarcascade_frontalface_default.xml"
         detector = cv2.CascadeClassifier(harcascadePath)
         sampleNum = 0
@@ -253,10 +253,23 @@ def getImagesAndLabels(path):
     return faces, Ids
 
 
+def get_current_session():
+    if not os.path.exists("session_counter.txt"):
+        with open("session_counter.txt", "w") as f:
+            f.write("1")  # Start with session 1 if the file doesn't exist
+        return 1
+    with open("session_counter.txt", "r") as f:
+        return int(f.read())
+
+# Function to update the session number in the file
+def increment_session():
+    current_session = get_current_session()
+    with open("session_counter.txt", "w") as f:
+        f.write(str(current_session + 1))
+    return current_session
+
 def TrackImages():
-    recognizer = (
-        cv2.face.LBPHFaceRecognizer_create()
-    )  # cv2.createLBPHFaceRecognizer()
+    recognizer = cv2.face.LBPHFaceRecognizer_create()  # Initialize the recognizer
     recognizer.read("TrainingImageLabel/Trainner.yml")
     harcascadePath = "haarcascade_frontalface_default.xml"
     faceCascade = cv2.CascadeClassifier(harcascadePath)
@@ -265,58 +278,40 @@ def TrackImages():
     font = cv2.FONT_HERSHEY_SIMPLEX
     col_names = ["Id", "Name", "Date", "Time"]
     attendance = pd.DataFrame(columns=col_names)
+
     while True:
         ret, im = cam.read()
         gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
         faces = faceCascade.detectMultiScale(gray, 1.2, 5)
         for x, y, w, h in faces:
             cv2.rectangle(im, (x, y), (x + w, y + h), (225, 0, 0), 2)
-            Id, conf = recognizer.predict(gray[y : y + h, x : x + w])
+            Id, conf = recognizer.predict(gray[y: y + h, x: x + w])
             if conf < 60:
                 ts = time.time()
                 date = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-                timeStamp = datetime.datetime.fromtimestamp(ts).strftime(
-                    "%H:%M:%S"
-                )
-                aa = df.loc[df["Id"] == 1]["Name"].values[0]
-                # print(aa)
+                timeStamp = datetime.datetime.fromtimestamp(ts).strftime("%H:%M:%S")
+                aa = df.loc[df["Id"] == Id]["Name"].values[0]  # Use the correct Id
                 tt = str(Id) + "-" + aa
                 attendance.loc[len(attendance)] = [Id, aa, date, timeStamp]
-
             else:
                 Id = "Unknown"
                 tt = str(Id)
-            # if(conf > 50):
-            #     noOfFile=len(os.listdir("ImagesUnknown"))+1
-            #     cv2.imwrite("ImagesUnknown/Image"+str(noOfFile) + ".jpg", im[y:y+h,x:x+w])
             cv2.putText(im, str(tt), (x, y + h), font, 1, (255, 255, 255), 2)
+
         attendance = attendance.drop_duplicates(subset=["Id"], keep="first")
         cv2.imshow("im", im)
         if cv2.waitKey(1) == ord("q"):
             break
-    ts = time.time()
-    date = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-    timeStamp = datetime.datetime.fromtimestamp(ts).strftime("%H:%M:%S")
-    Hour, Minute, Second = timeStamp.split(":")
-    fileName = (
-        "Attendance/Attendance_"
-        + date
-        + "_"
-        + Hour
-        + "-"
-        + Minute
-        + "-"
-        + Second
-        + ".csv"
-    )
-    attendance.to_csv(fileName, index=False)
+
+    # Get the session number and increment it
+    session_number = increment_session()
+    file_name = f"Attendance/Session {session_number}.csv"
+    attendance.to_csv(file_name, index=False)
+
     cam.release()
     cv2.destroyAllWindows()
-    # print(attendance)
     res = attendance
     message2.configure(text=res)
-
-
 clearButton = tk.Button(
     window,
     text="Clear",

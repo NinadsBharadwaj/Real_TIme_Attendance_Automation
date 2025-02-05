@@ -1,0 +1,34 @@
+# Byte-compiled / Cached files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Dependencies
+required.txt
+
+# Training and model files
+TrainingImageLabel/
+TrainingImage/
+ImagesUnknown/
+
+# Attendance records (Generated files)
+Attendance/
+
+# Face recognition session tracking
+session_counter.txt
+
+# Jupyter Notebook checkpoints (if using notebooks)
+.ipynb_checkpoints/
